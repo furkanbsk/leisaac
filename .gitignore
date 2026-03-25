@@ -73,8 +73,11 @@ source/leisaac/leisaac/devices/lerobot/.cache/lekiwi_leader.json
 # scene assets
 assets/scenes/*
 !assets/scenes/.gitkeep
+!assets/scenes/table_with_cube/
+!assets/scenes/table_with_cube/scene.usd
 assets/robots/*
 !assets/robots/.gitkeep
+assets/*.zip
 
 # greenscreen
 greenscreen/*
