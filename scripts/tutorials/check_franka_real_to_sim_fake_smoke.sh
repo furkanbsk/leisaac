@@ -23,7 +23,9 @@ trap cleanup EXIT
 source "${CONDA_SH}"
 conda activate "${CONDA_ENV_NAME}"
 set +u
-source "${ISAACSIM_ROOT}/setup_conda_env.sh"
+if [[ -f "${ISAACSIM_ROOT}/setup_conda_env.sh" ]]; then
+  source "${ISAACSIM_ROOT}/setup_conda_env.sh"
+fi
 source "${ROS_SETUP}"
 source "${ROS_WS}/install/setup.bash"
 set -u

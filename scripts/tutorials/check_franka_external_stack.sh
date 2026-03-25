@@ -25,6 +25,16 @@ print_status() {
     fi
 }
 
+print_optional_status() {
+    local label="$1"
+    local path="$2"
+    if [[ -e "$path" ]]; then
+        printf '[ok] %s: %s\n' "$label" "$path"
+    else
+        printf '[optional-missing] %s: %s\n' "$label" "$path"
+    fi
+}
+
 print_section "Chosen Paths"
 printf 'repo_root: %s\n' "$ROOT_DIR"
 printf 'conda_env_name: %s\n' "$CONDA_ENV_NAME"
@@ -37,13 +47,13 @@ printf 'ros_ws: %s\n' "$ROS_WS"
 
 print_section "Filesystem Checks"
 print_status "conda init script" "$CONDA_SH"
-print_status "Isaac Sim root" "$ISAACSIM_ROOT"
-print_status "Isaac Sim conda env script" "$ISAACSIM_ROOT/setup_conda_env.sh"
+print_optional_status "Isaac Sim root" "$ISAACSIM_ROOT"
+print_optional_status "Isaac Sim conda env script" "$ISAACSIM_ROOT/setup_conda_env.sh"
 print_status "IsaacLab root" "$ISAACLAB_ROOT"
 print_status "IsaacLab launcher" "$ISAACLAB_ROOT/isaaclab.sh"
-print_status "ROS setup" "$ROS_SETUP"
-print_status "franka_ros2 workspace" "$ROS_WS"
-print_status "franka_ros2 install setup" "$ROS_WS/install/setup.bash"
+print_optional_status "ROS setup" "$ROS_SETUP"
+print_optional_status "franka_ros2 workspace" "$ROS_WS"
+print_optional_status "franka_ros2 install setup" "$ROS_WS/install/setup.bash"
 print_status "scene asset" "$ROOT_DIR/assets/scenes/table_with_cube/scene.usd"
 
 print_section "Python and ROS Checks"
@@ -57,9 +67,12 @@ if [[ -f "$CONDA_SH" ]]; then
     set -u
     python - <<'PY'
 import importlib.util
-mods = ["isaaclab", "isaaclab_tasks", "rclpy", "sensor_msgs.msg"]
+mods = ["isaacsim", "isaaclab", "isaaclab_tasks", "rclpy", "sensor_msgs.msg"]
 for mod in mods:
-    print(f"{mod}: {'ok' if importlib.util.find_spec(mod) else 'missing'}")
+    try:
+        print(f"{mod}: {'ok' if importlib.util.find_spec(mod) else 'missing'}")
+    except ModuleNotFoundError:
+        print(f"{mod}: missing")
 PY
 fi
 
@@ -76,6 +89,7 @@ fi
 print_section "Compatibility Notes"
 cat <<'EOF'
 - The helper scripts now resolve external dependencies through env vars first.
+- `ISAACSIM_ROOT` is optional when `isaacsim` is installed directly into the Conda environment.
 - `isaaclab` and `isaaclab_tasks` may show as missing in plain Python checks.
   The canonical runtime check is whether `$ISAACLAB_ROOT/isaaclab.sh` exists and the smoke scripts run.
 - If your new machine uses different install locations, override:

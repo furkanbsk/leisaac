@@ -30,7 +30,9 @@ set +e
 source "$CONDA_SH"
 conda activate "$CONDA_ENV_NAME"
 set +u
-source "$ISAACSIM_ROOT/setup_conda_env.sh"
+if [ -f "$ISAACSIM_ROOT/setup_conda_env.sh" ]; then
+    source "$ISAACSIM_ROOT/setup_conda_env.sh"
+fi
 set -u
 cd "$REPO_ROOT"
 "$ISAACLAB_ROOT/isaaclab.sh" -p scripts/tutorials/check_franka_liftcube_smoke.py --headless \
