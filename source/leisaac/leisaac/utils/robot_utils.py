@@ -4,12 +4,8 @@ import numpy as np
 import torch
 from isaaclab.envs import DirectRLEnv, ManagerBasedEnv
 from isaaclab.sensors import Camera
-from leisaac.assets.robots.lerobot import (
-    SO101_FOLLOWER_MOTOR_LIMITS,
-    SO101_FOLLOWER_REST_POSE_RANGE,
-    SO101_FOLLOWER_USD_JOINT_LIMLITS,
-)
 from leisaac.enhance.datasets.lerobot_dataset_handler import LeRobotDatasetCfg
+from leisaac.utils.robot_profiles import get_robot_joint_profile
 
 
 @dataclass
@@ -82,8 +78,13 @@ def is_so101_at_rest_pose(joint_pos: torch.Tensor, joint_names: list[str]) -> to
     """
     Check if the robot is in the rest pose.
     """
+    return is_robot_at_rest_pose(joint_pos, joint_names, "so101")
+
+
+def is_robot_at_rest_pose(joint_pos: torch.Tensor, joint_names: list[str], profile_name: str) -> torch.Tensor:
+    """Check if the robot is within the configured rest pose range."""
     is_reset = torch.ones(joint_pos.shape[0], dtype=torch.bool, device=joint_pos.device)
-    reset_pose_range = SO101_FOLLOWER_REST_POSE_RANGE
+    reset_pose_range = get_robot_joint_profile(profile_name).rest_pose_range_deg
     joint_pos = joint_pos / torch.pi * 180.0  # change to degree
     for joint_name, (min_pos, max_pos) in reset_pose_range.items():
         joint_idx = joint_names.index(joint_name)
@@ -97,12 +98,18 @@ def convert_leisaac_action_to_lerobot(action: torch.Tensor | np.ndarray) -> np.n
     """
     Convert the action from LeIsaac to Lerobot. Just convert value, not include the format.
     """
+    return convert_leisaac_action_to_dataset(action, "so101")
+
+
+def convert_leisaac_action_to_dataset(action: torch.Tensor | np.ndarray, profile_name: str) -> np.ndarray:
+    """Convert a LeIsaac joint action tensor into the configured dataset joint range."""
     if isinstance(action, torch.Tensor):
         action = action.cpu().numpy()
 
     processed_action = np.zeros_like(action)
-    joint_limits = SO101_FOLLOWER_USD_JOINT_LIMLITS
-    motor_limits = SO101_FOLLOWER_MOTOR_LIMITS
+    profile = get_robot_joint_profile(profile_name)
+    joint_limits = profile.usd_joint_limits_deg
+    motor_limits = profile.dataset_joint_limits
     action = action / torch.pi * 180.0  # convert to degree
 
     for idx, joint_name in enumerate(joint_limits):
@@ -120,12 +127,18 @@ def convert_lerobot_action_to_leisaac(action: torch.Tensor | np.ndarray) -> np.n
     """
     Convert the action from Lerobot to LeIsaac. Just convert value, not include the format.
     """
+    return convert_dataset_action_to_leisaac(action, "so101")
+
+
+def convert_dataset_action_to_leisaac(action: torch.Tensor | np.ndarray, profile_name: str) -> np.ndarray:
+    """Convert a dataset joint vector back into LeIsaac radians."""
     if isinstance(action, torch.Tensor):
         action = action.cpu().numpy()
 
     processed_action = np.zeros_like(action)
-    joint_limits = SO101_FOLLOWER_USD_JOINT_LIMLITS
-    motor_limits = SO101_FOLLOWER_MOTOR_LIMITS
+    profile = get_robot_joint_profile(profile_name)
+    joint_limits = profile.usd_joint_limits_deg
+    motor_limits = profile.dataset_joint_limits
 
     for idx, joint_name in enumerate(joint_limits):
         motor_limit_range = motor_limits[joint_name]

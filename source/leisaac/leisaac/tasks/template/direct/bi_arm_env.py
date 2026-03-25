@@ -13,8 +13,8 @@ from leisaac.enhance.envs import RecorderEnhanceDirectRLEnvCfg as DirectRLEnvCfg
 from leisaac.enhance.envs.mdp.recorders.recorders_cfg import (
     DirectEnvActionStateRecorderManagerCfg as RecordTerm,
 )
-from leisaac.utils.constant import BI_ARM_JOINT_NAMES
-from leisaac.utils.robot_utils import convert_leisaac_action_to_lerobot
+from leisaac.utils.robot_profiles import SO101_JOINT_PROFILE, get_robot_joint_profile
+from leisaac.utils.robot_utils import convert_leisaac_action_to_dataset
 
 from .. import mdp
 from ..bi_arm_env_cfg import BiArmEventCfg, BiArmTaskSceneCfg
@@ -58,8 +58,10 @@ class BiArmTaskDirectEnvCfg(DirectRLEnvCfg):
     dynamic_reset_gripper_effort_limit: bool = True
     """Whether to dynamically reset the gripper effort limit."""
 
-    robot_name: str = "bi_so101_follower"
+    robot_name: str = f"bi_{SO101_JOINT_PROFILE.robot_name}"
     """Robot name for lerobot dataset export."""
+    joint_profile_name: str = SO101_JOINT_PROFILE.name
+    """Joint profile used for feature naming and dataset conversions."""
     default_feature_joint_names: list[str] = MISSING
     """Default feature joint names for lerobot dataset export."""
     task_description: str = MISSING
@@ -67,6 +69,26 @@ class BiArmTaskDirectEnvCfg(DirectRLEnvCfg):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        profile = get_robot_joint_profile(self.joint_profile_name)
+        arm_dim = profile.single_arm_dim
+        self.action_space = 2 * arm_dim
+        for key in [
+            "left_joint_pos",
+            "left_joint_vel",
+            "left_joint_pos_rel",
+            "left_joint_vel_rel",
+            "left_joint_pos_target",
+            "right_joint_pos",
+            "right_joint_vel",
+            "right_joint_pos_rel",
+            "right_joint_vel_rel",
+            "right_joint_pos_target",
+        ]:
+            self.state_space[key] = arm_dim
+        self.state_space["actions"] = 2 * arm_dim
+        for key in ["left_joint_pos", "right_joint_pos", "left_joint_pos_target", "right_joint_pos_target"]:
+            self.observation_space[key] = arm_dim
+        self.observation_space["actions"] = 2 * arm_dim
 
         self.decimation = 1
         self.episode_length_s = 25.0
@@ -87,7 +109,7 @@ class BiArmTaskDirectEnvCfg(DirectRLEnvCfg):
                 self.observation_space[cam] = [getattr(self.scene, cam).height, getattr(self.scene, cam).width, 3]
                 self.cameras.append(cam)
 
-        self.default_feature_joint_names = [f"{joint_name}.pos" for joint_name in BI_ARM_JOINT_NAMES]
+        self.default_feature_joint_names = profile.bi_arm_feature_joint_names
 
     def use_teleop_device(self, teleop_device) -> None:
         self.task_type = teleop_device
@@ -104,8 +126,11 @@ class BiArmTaskDirectEnvCfg(DirectRLEnvCfg):
         action = episode_data._data["actions"][-1]
         if dataset_cfg.action_align:
             action = action.unsqueeze(0)
-            left_arm_action = convert_leisaac_action_to_lerobot(action[:, :6]).squeeze(0)
-            right_arm_action = convert_leisaac_action_to_lerobot(action[:, 6:]).squeeze(0)
+            arm_dim = get_robot_joint_profile(self.joint_profile_name).single_arm_dim
+            left_arm_action = convert_leisaac_action_to_dataset(action[:, :arm_dim], self.joint_profile_name).squeeze(0)
+            right_arm_action = convert_leisaac_action_to_dataset(
+                action[:, arm_dim : 2 * arm_dim], self.joint_profile_name
+            ).squeeze(0)
             processed_action = np.concatenate([left_arm_action, right_arm_action], axis=0)
         else:
             processed_action = action.cpu().numpy()
@@ -113,8 +138,12 @@ class BiArmTaskDirectEnvCfg(DirectRLEnvCfg):
             "action": processed_action,
             "observation.state": np.concatenate(
                 [
-                    convert_leisaac_action_to_lerobot(obs_data["left_joint_pos"][-1].unsqueeze(0)).squeeze(0),
-                    convert_leisaac_action_to_lerobot(obs_data["right_joint_pos"][-1].unsqueeze(0)).squeeze(0),
+                    convert_leisaac_action_to_dataset(
+                        obs_data["left_joint_pos"][-1].unsqueeze(0), self.joint_profile_name
+                    ).squeeze(0),
+                    convert_leisaac_action_to_dataset(
+                        obs_data["right_joint_pos"][-1].unsqueeze(0), self.joint_profile_name
+                    ).squeeze(0),
                 ],
                 axis=0,
             ),

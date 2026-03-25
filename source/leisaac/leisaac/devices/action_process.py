@@ -3,12 +3,46 @@ from typing import Any
 
 import isaaclab.envs.mdp as mdp
 import torch
-from leisaac.assets.robots.lerobot import SO101_FOLLOWER_USD_JOINT_LIMLITS
+from leisaac.utils.robot_profiles import get_robot_joint_profile
 
 
 def init_action_cfg(action_cfg, device):
     """SO101 Follower action configuration: arm_action and gripper_action"""
-    if device in ["so101leader", "lekiwi-leader"]:
+    if device in ["franka-keyboard", "franka-spacemouse"]:
+        action_cfg.arm_action = mdp.DifferentialInverseKinematicsActionCfg(
+            asset_name="robot",
+            joint_names=["panda_joint.*"],
+            body_name="panda_hand",
+            controller=mdp.DifferentialIKControllerCfg(command_type="pose", ik_method="dls", use_relative_mode=True),
+            scale=0.5,
+            body_offset=mdp.DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, 0.0, 0.107]),
+        )
+        action_cfg.gripper_action = mdp.BinaryJointPositionActionCfg(
+            asset_name="robot",
+            joint_names=["panda_finger_joint.*"],
+            open_command_expr={"panda_finger_joint.*": 0.04},
+            close_command_expr={"panda_finger_joint.*": 0.0},
+        )
+    elif device in ["franka-leader"]:
+        action_cfg.arm_action = mdp.JointPositionActionCfg(
+            asset_name="robot",
+            joint_names=[
+                "panda_joint1",
+                "panda_joint2",
+                "panda_joint3",
+                "panda_joint4",
+                "panda_joint5",
+                "panda_joint6",
+                "panda_joint7",
+            ],
+            scale=1.0,
+        )
+        action_cfg.gripper_action = mdp.JointPositionActionCfg(
+            asset_name="robot",
+            joint_names=["panda_finger_joint1", "panda_finger_joint2"],
+            scale=1.0,
+        )
+    elif device in ["so101leader", "lekiwi-leader"]:
         action_cfg.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot",
             joint_names=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
@@ -147,11 +181,12 @@ joint_names_to_motor_ids = {
 }
 
 
-def convert_action_from_so101_leader(
-    joint_state: dict[str, float], motor_limits: dict[str, tuple[float, float]], teleop_device
+def convert_action_from_joint_leader(
+    joint_state: dict[str, float], motor_limits: dict[str, tuple[float, float]], teleop_device, profile_name: str
 ) -> torch.Tensor:
-    processed_action = torch.zeros(teleop_device.env.num_envs, 6, device=teleop_device.env.device)
-    joint_limits = SO101_FOLLOWER_USD_JOINT_LIMLITS
+    profile = get_robot_joint_profile(profile_name)
+    processed_action = torch.zeros(teleop_device.env.num_envs, profile.single_arm_dim, device=teleop_device.env.device)
+    joint_limits = profile.usd_joint_limits_deg
     for joint_name, motor_id in joint_names_to_motor_ids.items():
         motor_limit_range = motor_limits[joint_name]
         joint_limit_range = joint_limits[joint_name]
@@ -164,11 +199,26 @@ def convert_action_from_so101_leader(
     return processed_action
 
 
+def convert_action_from_so101_leader(
+    joint_state: dict[str, float], motor_limits: dict[str, tuple[float, float]], teleop_device
+) -> torch.Tensor:
+    return convert_action_from_joint_leader(joint_state, motor_limits, teleop_device, "so101")
+
+
 def preprocess_device_action(action: dict[str, Any], teleop_device) -> torch.Tensor:
     if action.get("so101_leader") is not None:
         processed_action = convert_action_from_so101_leader(
             action["joint_state"], action["motor_limits"], teleop_device
         )
+    elif action.get("franka-leader") is not None:
+        processed_action = torch.zeros(teleop_device.env.num_envs, 9, device=teleop_device.env.device)
+        processed_action[:, :] = action["joint_state"].to(dtype=torch.float32, device=teleop_device.env.device)
+    elif action.get("franka-keyboard") is not None or action.get("franka-spacemouse") is not None:
+        processed_action = torch.zeros(teleop_device.env.num_envs, 7, device=teleop_device.env.device)
+        processed_action[:, :6] = action["delta_pose"].to(dtype=torch.float32, device=teleop_device.env.device).repeat(
+            teleop_device.env.num_envs, 1
+        )
+        processed_action[:, 6] = -1.0 if action["gripper_command"] else 1.0
     elif action.get("keyboard") is not None or action.get("gamepad") is not None:
         processed_action = torch.zeros(teleop_device.env.num_envs, 8, device=teleop_device.env.device)
         processed_action[:, :] = action["joint_state"]

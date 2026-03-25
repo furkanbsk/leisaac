@@ -22,7 +22,8 @@ from leisaac.assets.robots.lerobot import LEKIWI_CFG
 from leisaac.devices.action_process import init_action_cfg, preprocess_device_action
 from leisaac.enhance.datasets.lerobot_dataset_handler import LeRobotDatasetCfg
 from leisaac.utils.constant import LEKIWI_JOINT_NAMES
-from leisaac.utils.robot_utils import convert_leisaac_action_to_lerobot
+from leisaac.utils.robot_profiles import LEKIWI_ARM_JOINT_PROFILE
+from leisaac.utils.robot_utils import convert_leisaac_action_to_dataset
 
 from . import mdp
 
@@ -184,8 +185,10 @@ class LeKiwiTaskEnvCfg(ManagerBasedRLEnvCfg):
     dynamic_reset_gripper_effort_limit: bool = True
     """Whether to dynamically reset the gripper effort limit."""
 
-    robot_name: str = "lekiwi"
+    robot_name: str = LEKIWI_ARM_JOINT_PROFILE.robot_name
     """Robot name for lerobot dataset export."""
+    joint_profile_name: str = LEKIWI_ARM_JOINT_PROFILE.name
+    """Joint profile used for arm dataset conversions."""
     default_feature_joint_names: list[str] = MISSING
     """Default feature joint names for lerobot dataset export."""
     task_description: str = MISSING
@@ -219,9 +222,10 @@ class LeKiwiTaskEnvCfg(ManagerBasedRLEnvCfg):
     def build_lerobot_frame(self, episode_data: EpisodeData, dataset_cfg: LeRobotDatasetCfg) -> dict:
         obs_data = episode_data._data["obs"]
         action = episode_data._data["actions"][-1]
+        arm_dim = LEKIWI_ARM_JOINT_PROFILE.single_arm_dim
         if dataset_cfg.action_align:
             action = action.unsqueeze(0)
-            arm_action = convert_leisaac_action_to_lerobot(action[:, :6]).squeeze(0)
+            arm_action = convert_leisaac_action_to_dataset(action[:, :arm_dim], self.joint_profile_name).squeeze(0)
             wheel_action = obs_data["user_vel_action"][-1].cpu().numpy()
             processed_action = np.concatenate([arm_action, wheel_action], axis=0)
         else:
@@ -230,7 +234,9 @@ class LeKiwiTaskEnvCfg(ManagerBasedRLEnvCfg):
             "action": processed_action,
             "observation.state": np.concatenate(
                 [
-                    convert_leisaac_action_to_lerobot(obs_data["joint_pos"][-1][:-3].unsqueeze(0)).squeeze(0),
+                    convert_leisaac_action_to_dataset(
+                        obs_data["joint_pos"][-1][:arm_dim].unsqueeze(0), self.joint_profile_name
+                    ).squeeze(0),
                     obs_data["user_vel_state"][-1].cpu().numpy(),
                 ],
                 axis=0,

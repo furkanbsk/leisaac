@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from .robot_profiles import LEKIWI_ARM_JOINT_PROFILE, SO101_JOINT_PROFILE
+
 
 def _detect_git_root() -> Path:
     """Locate repository root; fallback to current file ancestor."""
@@ -24,28 +26,13 @@ def _resolve_assets_root() -> str:
 
 ASSETS_ROOT = _resolve_assets_root()
 
-SINGLE_ARM_JOINT_NAMES = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"]
+SINGLE_ARM_JOINT_NAMES = list(SO101_JOINT_PROFILE.single_arm_joint_names)
 BI_ARM_JOINT_NAMES = [
-    "left_shoulder_pan",
-    "left_shoulder_lift",
-    "left_elbow_flex",
-    "left_wrist_flex",
-    "left_wrist_roll",
-    "left_gripper",
-    "right_shoulder_pan",
-    "right_shoulder_lift",
-    "right_elbow_flex",
-    "right_wrist_flex",
-    "right_wrist_roll",
-    "right_gripper",
+    *[f"left_{joint_name}" for joint_name in SO101_JOINT_PROFILE.single_arm_joint_names],
+    *[f"right_{joint_name}" for joint_name in SO101_JOINT_PROFILE.single_arm_joint_names],
 ]
 LEKIWI_JOINT_NAMES = [
-    "shoulder_pan",
-    "shoulder_lift",
-    "elbow_flex",
-    "wrist_flex",
-    "wrist_roll",
-    "gripper",
+    *LEKIWI_ARM_JOINT_PROFILE.single_arm_joint_names,
     "x",
     "y",
     "theta",

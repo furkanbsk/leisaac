@@ -12,6 +12,11 @@ if multiprocessing.get_start_method() != "spawn":
     multiprocessing.set_start_method("spawn", force=True)
 import argparse
 import signal
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "source" / "leisaac"))
 
 from isaaclab.app import AppLauncher
 
@@ -25,6 +30,9 @@ parser.add_argument(
     choices=[
         "keyboard",
         "gamepad",
+        "franka-keyboard",
+        "franka-leader",
+        "franka-spacemouse",
         "so101leader",
         "bi-so101leader",
         "lekiwi-keyboard",
@@ -51,6 +59,19 @@ parser.add_argument(
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed for the environment.")
 parser.add_argument("--sensitivity", type=float, default=1.0, help="Sensitivity factor.")
+parser.add_argument("--ros_namespace", type=str, default="", help="ROS2 namespace for a real Franka leader.")
+parser.add_argument(
+    "--joint_state_topic",
+    type=str,
+    default=None,
+    help="ROS2 joint_states topic for a real Franka leader. Defaults to '/joint_states' or '/<namespace>/joint_states'.",
+)
+parser.add_argument(
+    "--leader_state_timeout",
+    type=float,
+    default=1.0,
+    help="Maximum age in seconds for received real Franka joint state before teleop idles.",
+)
 
 # recorder_parameter
 parser.add_argument("--record", action="store_true", help="whether to enable record function")
@@ -159,6 +180,12 @@ def main():  # noqa: C901
     # precheck task and teleop device
     if "BiArm" in task_name:
         assert args_cli.teleop_device == "bi-so101leader", "only support bi-so101leader for bi-arm task"
+    if "Franka" in task_name:
+        assert args_cli.teleop_device in [
+            "franka-keyboard",
+            "franka-leader",
+            "franka-spacemouse",
+        ], "only support franka-keyboard, franka-spacemouse, or franka-leader for Franka task"
     if "LeKiwi" in task_name:
         assert args_cli.teleop_device in [
             "lekiwi-leader",
@@ -241,6 +268,23 @@ def main():  # noqa: C901
         from leisaac.devices import SO101Keyboard
 
         teleop_interface = SO101Keyboard(env, sensitivity=args_cli.sensitivity)
+    elif args_cli.teleop_device == "franka-keyboard":
+        from leisaac.devices import FrankaKeyboard
+
+        teleop_interface = FrankaKeyboard(env, sensitivity=args_cli.sensitivity)
+    elif args_cli.teleop_device == "franka-leader":
+        from leisaac.devices import FrankaLeader
+
+        teleop_interface = FrankaLeader(
+            env,
+            ros_namespace=args_cli.ros_namespace,
+            joint_state_topic=args_cli.joint_state_topic,
+            state_timeout=args_cli.leader_state_timeout,
+        )
+    elif args_cli.teleop_device == "franka-spacemouse":
+        from leisaac.devices import FrankaSpaceMouse
+
+        teleop_interface = FrankaSpaceMouse(env, sensitivity=args_cli.sensitivity)
     elif args_cli.teleop_device == "gamepad":
         from leisaac.devices import SO101Gamepad
 
@@ -269,8 +313,9 @@ def main():  # noqa: C901
         teleop_interface = LeKiwiGamepad(env, sensitivity=args_cli.sensitivity)
     else:
         raise ValueError(
-            f"Invalid device interface '{args_cli.teleop_device}'. Supported: 'keyboard', 'gamepad', 'so101leader',"
-            " 'bi-so101leader', 'lekiwi-keyboard', 'lekiwi-leader', 'lekiwi-gamepad'."
+            f"Invalid device interface '{args_cli.teleop_device}'. Supported: 'keyboard', 'gamepad',"
+            " 'franka-keyboard', 'franka-leader', 'franka-spacemouse', 'so101leader', 'bi-so101leader',"
+            " 'lekiwi-keyboard', 'lekiwi-leader', 'lekiwi-gamepad'."
         )
 
     # add teleoperation key for env reset

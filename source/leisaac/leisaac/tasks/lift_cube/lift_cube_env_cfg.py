@@ -20,6 +20,8 @@ from leisaac.utils.env_utils import delete_attribute
 from leisaac.utils.general_assets import parse_usd_and_create_subassets
 
 from ..template import (
+    FrankaSingleArmTaskEnvCfg,
+    FrankaSingleArmTaskSceneCfg,
     SingleArmObservationsCfg,
     SingleArmTaskEnvCfg,
     SingleArmTaskSceneCfg,
@@ -166,3 +168,127 @@ class LiftCubeDigitalTwinEnvCfg(LiftCubeEnvCfg, ManagerBasedRLDigitalTwinEnvCfg)
         SceneEntityCfg("cube"),
         SceneEntityCfg("robot"),
     ]
+
+
+@configclass
+class FrankaLiftCubeSceneCfg(FrankaSingleArmTaskSceneCfg):
+    """Scene configuration for the Franka lift cube task."""
+
+    scene: AssetBaseCfg = TABLE_WITH_CUBE_CFG.replace(prim_path="{ENV_REGEX_NS}/Scene")
+
+    front: TiledCameraCfg = TiledCameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/panda_link0/front_camera",
+        offset=TiledCameraCfg.OffsetCfg(
+            pos=(-0.55, -0.68, 0.42), rot=(0.77337, 0.55078, -0.2374, -0.20537), convention="opengl"
+        ),
+        data_types=["rgb"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=40.6,
+            focus_distance=400.0,
+            horizontal_aperture=38.11,
+            clipping_range=(0.01, 50.0),
+            lock_camera=True,
+        ),
+        width=640,
+        height=480,
+        update_period=1 / 30.0,
+    )
+
+    light = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=1000.0),
+    )
+
+    def __post_init__(self):
+        super().__post_init__()
+        delete_attribute(self, "wrist")
+
+
+@configclass
+class FrankaObservationsCfg(SingleArmObservationsCfg):
+    @configclass
+    class SubtaskCfg(ObsGroup):
+        """Observations for Franka subtask group."""
+
+        pick_cube = ObsTerm(
+            func=mdp.object_grasped,
+            params={
+                "robot_cfg": SceneEntityCfg("robot"),
+                "ee_frame_cfg": SceneEntityCfg("ee_frame"),
+                "object_cfg": SceneEntityCfg("cube"),
+                "grasp_threshold": 0.02,
+            },
+        )
+
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
+    subtask_terms: SubtaskCfg = SubtaskCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+        delete_attribute(self.policy, "wrist")
+
+
+@configclass
+class FrankaTerminationsCfg(SingleArmTerminationsCfg):
+    success = DoneTerm(
+        func=mdp.cube_height_above_base,
+        params={
+            "cube_cfg": SceneEntityCfg("cube"),
+            "robot_cfg": SceneEntityCfg("robot"),
+            "robot_base_name": "panda_link0",
+            "height_threshold": 0.20,
+        },
+    )
+
+
+@configclass
+class FrankaLiftCubeEnvCfg(FrankaSingleArmTaskEnvCfg):
+    """Configuration for the Franka lift cube environment."""
+
+    scene: FrankaLiftCubeSceneCfg = FrankaLiftCubeSceneCfg(env_spacing=8.0)
+
+    observations: FrankaObservationsCfg = FrankaObservationsCfg()
+
+    terminations: FrankaTerminationsCfg = FrankaTerminationsCfg()
+
+    task_description: str = "Lift the red cube up."
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        self.viewer.eye = (-0.35, -0.85, 0.7)
+        self.viewer.lookat = (0.55, -0.05, 0.12)
+
+        self.scene.robot.init_state.pos = (0.35, -0.64, 0.01)
+
+        parse_usd_and_create_subassets(TABLE_WITH_CUBE_USD_PATH, self)
+
+        domain_randomization(
+            self,
+            random_options=[
+                randomize_object_uniform(
+                    "cube",
+                    pose_range={
+                        "x": (-0.075, 0.075),
+                        "y": (-0.075, 0.075),
+                        "z": (0.0, 0.0),
+                        "yaw": (-30 * torch.pi / 180, 30 * torch.pi / 180),
+                    },
+                ),
+                randomize_camera_uniform(
+                    "front",
+                    pose_range={
+                        "x": (-0.005, 0.005),
+                        "y": (-0.005, 0.005),
+                        "z": (-0.005, 0.005),
+                        "roll": (-0.05 * torch.pi / 180, 0.05 * torch.pi / 180),
+                        "pitch": (-0.05 * torch.pi / 180, 0.05 * torch.pi / 180),
+                        "yaw": (-0.05 * torch.pi / 180, 0.05 * torch.pi / 180),
+                    },
+                    convention="opengl",
+                ),
+            ],
+        )

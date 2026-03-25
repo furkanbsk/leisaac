@@ -6,6 +6,11 @@ import multiprocessing
 if multiprocessing.get_start_method() != "spawn":
     multiprocessing.set_start_method("spawn", force=True)
 import argparse
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "source" / "leisaac"))
 
 from isaaclab.app import AppLauncher
 
@@ -36,8 +41,8 @@ parser.add_argument(
     type=str,
     default=None,
     help=(
-        "Specify task type. If your dataset is recorded with keyboard, you should set it to 'keyboard', otherwise not"
-        " to set it and keep default value None."
+        "Specify task type. Examples: 'keyboard', 'gamepad', 'franka-keyboard', 'franka-leader', 'franka-spacemouse'."
+        " If omitted, the task default is inferred."
     ),
 )
 
@@ -135,6 +140,13 @@ def main():
     env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=num_envs)
     task_type = get_task_type(args_cli.task, args_cli.task_type)
     env_cfg.use_teleop_device(task_type)
+
+    if args_cli.replay_mode == "state" and task_type in ["franka-keyboard", "franka-spacemouse"]:
+        raise ValueError(
+            "State replay is not supported for Franka teleop datasets because the Franka teleop action space "
+            "is differential IK pose + binary gripper, while the recorded articulation state is joint-space. "
+            "Use '--replay_mode action' for Franka datasets."
+        )
 
     # Disable all recorders and terminations
     is_direct_env = "Direct" in args_cli.task

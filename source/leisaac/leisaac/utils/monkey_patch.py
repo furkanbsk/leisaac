@@ -19,6 +19,18 @@ def patch_termination_manager():
         # reset computation
         self._truncated_buf[:] = False
         self._terminated_buf[:] = False
+        # IsaacLab versions with dict-backed term storage already support
+        # overwriting each term cleanly. In that case, preserve the upstream
+        # semantics instead of applying the old tensor-based fix.
+        if isinstance(self._term_dones, dict):
+            for name, term_cfg in zip(self._term_names, self._term_cfgs):
+                value = term_cfg.func(self._env, **term_cfg.params)
+                if term_cfg.time_out:
+                    self._truncated_buf |= value
+                else:
+                    self._terminated_buf |= value
+                self._term_dones[name][:] = value
+            return self._truncated_buf | self._terminated_buf
         # iterate over all the termination terms
         for i, term_cfg in enumerate(self._term_cfgs):
             value = term_cfg.func(self._env, **term_cfg.params)

@@ -21,8 +21,8 @@ from isaaclab.utils.datasets.episode_data import EpisodeData
 from leisaac.assets.robots.lerobot import SO101_FOLLOWER_CFG
 from leisaac.devices.action_process import init_action_cfg, preprocess_device_action
 from leisaac.enhance.datasets.lerobot_dataset_handler import LeRobotDatasetCfg
-from leisaac.utils.constant import BI_ARM_JOINT_NAMES
-from leisaac.utils.robot_utils import convert_leisaac_action_to_lerobot
+from leisaac.utils.robot_profiles import SO101_JOINT_PROFILE, get_robot_joint_profile
+from leisaac.utils.robot_utils import convert_leisaac_action_to_dataset
 
 from . import mdp
 
@@ -184,8 +184,10 @@ class BiArmTaskEnvCfg(ManagerBasedRLEnvCfg):
     dynamic_reset_gripper_effort_limit: bool = True
     """Whether to dynamically reset the gripper effort limit."""
 
-    robot_name: str = "bi_so101_follower"
+    robot_name: str = f"bi_{SO101_JOINT_PROFILE.robot_name}"
     """Robot name for lerobot dataset export."""
+    joint_profile_name: str = SO101_JOINT_PROFILE.name
+    """Joint profile used for feature naming and dataset conversions."""
     default_feature_joint_names: list[str] = MISSING
     """Default feature joint names for lerobot dataset export."""
     task_description: str = MISSING
@@ -206,7 +208,7 @@ class BiArmTaskEnvCfg(ManagerBasedRLEnvCfg):
         self.scene.left_arm.init_state.pos = (3.4, -0.65, 0.89)
         self.scene.right_arm.init_state.pos = (3.8, -0.65, 0.89)
 
-        self.default_feature_joint_names = [f"{joint_name}.pos" for joint_name in BI_ARM_JOINT_NAMES]
+        self.default_feature_joint_names = get_robot_joint_profile(self.joint_profile_name).bi_arm_feature_joint_names
 
     def use_teleop_device(self, teleop_device) -> None:
         self.task_type = teleop_device
@@ -223,8 +225,11 @@ class BiArmTaskEnvCfg(ManagerBasedRLEnvCfg):
         action = episode_data._data["actions"][-1]
         if dataset_cfg.action_align:
             action = action.unsqueeze(0)
-            left_arm_action = convert_leisaac_action_to_lerobot(action[:, :6]).squeeze(0)
-            right_arm_action = convert_leisaac_action_to_lerobot(action[:, 6:]).squeeze(0)
+            arm_dim = get_robot_joint_profile(self.joint_profile_name).single_arm_dim
+            left_arm_action = convert_leisaac_action_to_dataset(action[:, :arm_dim], self.joint_profile_name).squeeze(0)
+            right_arm_action = convert_leisaac_action_to_dataset(
+                action[:, arm_dim : 2 * arm_dim], self.joint_profile_name
+            ).squeeze(0)
             processed_action = np.concatenate([left_arm_action, right_arm_action], axis=0)
         else:
             processed_action = action.cpu().numpy()
@@ -232,8 +237,12 @@ class BiArmTaskEnvCfg(ManagerBasedRLEnvCfg):
             "action": processed_action,
             "observation.state": np.concatenate(
                 [
-                    convert_leisaac_action_to_lerobot(obs_data["left_joint_pos"][-1].unsqueeze(0)).squeeze(0),
-                    convert_leisaac_action_to_lerobot(obs_data["right_joint_pos"][-1].unsqueeze(0)).squeeze(0),
+                    convert_leisaac_action_to_dataset(
+                        obs_data["left_joint_pos"][-1].unsqueeze(0), self.joint_profile_name
+                    ).squeeze(0),
+                    convert_leisaac_action_to_dataset(
+                        obs_data["right_joint_pos"][-1].unsqueeze(0), self.joint_profile_name
+                    ).squeeze(0),
                 ],
                 axis=0,
             ),

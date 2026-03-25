@@ -4,6 +4,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from leisaac.utils.constant import ASSETS_ROOT
+from leisaac.utils.robot_profiles import SO101_JOINT_PROFILE
 
 """Configuration for the SO101 Follower Robot."""
 SO101_FOLLOWER_ASSET_PATH = Path(ASSETS_ROOT) / "robots" / "so101_follower.usd"
@@ -53,34 +54,13 @@ SO101_FOLLOWER_CFG = ArticulationCfg(
 )
 
 # joint limit written in USD (degree)
-SO101_FOLLOWER_USD_JOINT_LIMLITS = {
-    "shoulder_pan": (-110.0, 110.0),
-    "shoulder_lift": (-100.0, 100.0),
-    "elbow_flex": (-100.0, 90.0),
-    "wrist_flex": (-95.0, 95.0),
-    "wrist_roll": (-160.0, 160.0),
-    "gripper": (-10, 100.0),
-}
+SO101_FOLLOWER_USD_JOINT_LIMLITS = dict(SO101_JOINT_PROFILE.usd_joint_limits_deg)
 
 # motor limit written in real device (normalized to related range)
-SO101_FOLLOWER_MOTOR_LIMITS = {
-    "shoulder_pan": (-100.0, 100.0),
-    "shoulder_lift": (-100.0, 100.0),
-    "elbow_flex": (-100.0, 100.0),
-    "wrist_flex": (-100.0, 100.0),
-    "wrist_roll": (-100.0, 100.0),
-    "gripper": (0.0, 100.0),
-}
+SO101_FOLLOWER_MOTOR_LIMITS = dict(SO101_JOINT_PROFILE.dataset_joint_limits)
 
 
-SO101_FOLLOWER_REST_POSE_RANGE = {
-    "shoulder_pan": (0 - 30.0, 0 + 30.0),  # 0 degree
-    "shoulder_lift": (-100.0 - 30.0, -100.0 + 30.0),  # -100 degree
-    "elbow_flex": (90.0 - 30.0, 90.0 + 30.0),  # 90 degree
-    "wrist_flex": (50.0 - 30.0, 50.0 + 30.0),  # 50 degree
-    "wrist_roll": (0.0 - 30.0, 0.0 + 30.0),  # 0 degree
-    "gripper": (-10.0 - 30.0, -10.0 + 30.0),  # -10 degree
-}
+SO101_FOLLOWER_REST_POSE_RANGE = dict(SO101_JOINT_PROFILE.rest_pose_range_deg)
 
 
 """Configuration for the LeKiwi Robot."""

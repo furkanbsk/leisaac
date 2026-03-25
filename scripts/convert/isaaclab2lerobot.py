@@ -23,8 +23,8 @@ parser.add_argument(
     type=str,
     default=None,
     help=(
-        "Specify task type. If your dataset is recorded with keyboard/gamepad, you should set it to"
-        " 'keyboard'/'gamepad', otherwise not to set it and keep default value None."
+        "Specify task type. Examples: 'keyboard', 'gamepad', 'franka-keyboard', 'franka-spacemouse'."
+        " If omitted, the task default is inferred."
     ),
 )
 parser.add_argument(
