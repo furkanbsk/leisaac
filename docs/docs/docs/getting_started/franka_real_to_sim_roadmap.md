@@ -130,11 +130,11 @@ Teslim kriteri:
 
 ## 7. Dataset Recording Smoke
 
-- [ ] `franka-leader` ile `LiftCube` task üzerinde kısa kayıt al
-- [ ] HDF5 dosyası oluştuğunu doğrula
-- [ ] Episode sayısını doğrula
-- [ ] `replay --replay_mode action` ile tekrar oynat
-- [ ] Observation/action şemasını doğrula
+- [x] `franka-leader` ile `LiftCube` task üzerinde kısa kayıt al
+- [x] HDF5 dosyası oluştuğunu doğrula
+- [x] Episode sayısını doğrula
+- [x] `replay --replay_mode action` ile tekrar oynat
+- [x] Observation/action şemasını doğrula
 
 Teslim kriteri:
 
@@ -190,7 +190,7 @@ Teslim kriteri:
 - [x] Helper script'lerde makineye gömülü path'leri env var tabanlı hale getir
 - [x] Dış bağımlılıkları tek script ile kontrol et
 - [x] Yeni makine için taşıma checklist'i yaz
-- [ ] Yeni makinada `check_franka_external_stack.sh` çalıştırıp doğrula
+- [x] Yeni makinada `check_franka_external_stack.sh` çalıştırıp doğrula
 
 Teslim kriteri:
 
@@ -201,7 +201,7 @@ Teslim kriteri:
 - [x] 1. Gerçek Franka arayüzünü netleştir
 - [x] 2. `FrankaLeader` device iskeletini çıkar
 - [x] 3. İlk real-to-sim smoke'u çalıştır
-- [ ] 4. Dataset record/replay doğrula
+- [x] 4. Dataset record/replay doğrula
 - [ ] 5. Sonra task genişlet
 
 ## Şu An Bir Sonraki Somut Adım
@@ -216,8 +216,19 @@ Teslim kriteri:
 - Aynı makinede `franka_ros2` workspace hazır: varsayılan `$HOME/franka_ros2_ws`
 - Fake hardware ile `/joint_states` doğrulandı
 - Bu makinada `fr3_*` joint isimleri yayınlanıyor; `FrankaLeader` artık `panda_*` ve `fr3_*` ailelerini destekliyor
+- Uzak `lira` makinesinde `env_isaacsim + ~/IsaacLab + ~/franka_ros2_ws` ile fake `leader -> sim follower` smoke geçti
+- `pygame` ve `serial` artık Franka hattı için zorunlu import değil; gamepad/SO101/LeKiwi donanım bağımlılıkları opsiyonel
+- Fake smoke helper artık ROS CLI topic introspection yerine doğrudan `FrankaLeader` subscriber ile doğrulama yapıyor
+- Uzak makinede `git-lfs` kuruldu ve `table_with_cube/scene.usd` gerçek USD olarak çekildi
+- Faz 7 local makinede `record -> replay(action)` olarak doğrulandı
+- Uzak makinede Faz 7 de `record -> replay(action)` olarak doğrulandı
+- Uzak makinedeki asıl blocker kaynak baskısı değil, `Isaac Sim 4.5` ile `IsaacLab v2.3.2` uyumsuzluğuydu
+- Uzak makinede `~/IsaacLab` yerelde çalışan `19b24c780ea` (`v2.1.1-4`) commit'ine hizalandı
+- `replay.py` artık `simulation_app.close()` çağırıyor ve completion marker'ını `flush=True` ile yazarak wrapper log doğrulamasını güvenilir hale getiriyor
 - Tek komutluk smoke helper:
   - [check_franka_real_to_sim_fake_smoke.sh](/home/nvidia/leisaac/scripts/tutorials/check_franka_real_to_sim_fake_smoke.sh)
+- Tek komutluk record/replay helper:
+  - [check_franka_real_to_sim_record_replay_fake_smoke.sh](/home/nvidia/leisaac/scripts/tutorials/check_franka_real_to_sim_record_replay_fake_smoke.sh)
 - Taşınabilir dış-bağımlılık kontrol helper'ı:
   - [check_franka_external_stack.sh](/home/nvidia/leisaac/scripts/tutorials/check_franka_external_stack.sh)
 - Taşıma checklist'i:

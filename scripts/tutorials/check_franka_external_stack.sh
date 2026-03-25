@@ -35,6 +35,14 @@ print_optional_status() {
     fi
 }
 
+print_franka_ros_packages() {
+    if command -v rg >/dev/null 2>&1; then
+        ros2 pkg list | rg '^franka' || true
+    else
+        ros2 pkg list | grep '^franka' || true
+    fi
+}
+
 print_section "Chosen Paths"
 printf 'repo_root: %s\n' "$ROOT_DIR"
 printf 'conda_env_name: %s\n' "$CONDA_ENV_NAME"
@@ -58,8 +66,11 @@ print_status "scene asset" "$ROOT_DIR/assets/scenes/table_with_cube/scene.usd"
 
 print_section "Python and ROS Checks"
 if [[ -f "$CONDA_SH" ]]; then
+    export CONDA_NO_PLUGINS="${CONDA_NO_PLUGINS:-yes}"
     source "$CONDA_SH"
-    conda activate "$CONDA_ENV_NAME"
+    if [[ "${CONDA_DEFAULT_ENV:-}" != "$CONDA_ENV_NAME" ]]; then
+        conda activate "$CONDA_ENV_NAME"
+    fi
     set +u
     if [[ -f "$ISAACSIM_ROOT/setup_conda_env.sh" ]]; then
         source "$ISAACSIM_ROOT/setup_conda_env.sh"
@@ -67,7 +78,7 @@ if [[ -f "$CONDA_SH" ]]; then
     set -u
     python - <<'PY'
 import importlib.util
-mods = ["isaacsim", "isaaclab", "isaaclab_tasks", "rclpy", "sensor_msgs.msg"]
+mods = ["isaacsim", "isaaclab", "isaaclab_tasks", "pygame", "serial"]
 for mod in mods:
     try:
         print(f"{mod}: {'ok' if importlib.util.find_spec(mod) else 'missing'}")
@@ -78,12 +89,31 @@ fi
 
 if [[ -f "$ROS_SETUP" ]]; then
     set +u
+    if [[ -f "$CONDA_SH" ]]; then
+        export CONDA_NO_PLUGINS="${CONDA_NO_PLUGINS:-yes}"
+        source "$CONDA_SH"
+        if [[ "${CONDA_DEFAULT_ENV:-}" != "$CONDA_ENV_NAME" ]]; then
+            conda activate "$CONDA_ENV_NAME"
+        fi
+        if [[ -f "$ISAACSIM_ROOT/setup_conda_env.sh" ]]; then
+            source "$ISAACSIM_ROOT/setup_conda_env.sh"
+        fi
+    fi
     source "$ROS_SETUP"
     if [[ -f "$ROS_WS/install/setup.bash" ]]; then
         source "$ROS_WS/install/setup.bash"
     fi
     set -u
-    ros2 pkg list | rg '^franka' || true
+    python - <<'PY'
+import importlib.util
+mods = ["rclpy", "sensor_msgs.msg"]
+for mod in mods:
+    try:
+        print(f"{mod}: {'ok' if importlib.util.find_spec(mod) else 'missing'}")
+    except ModuleNotFoundError:
+        print(f"{mod}: missing")
+PY
+    print_franka_ros_packages
 fi
 
 print_section "Compatibility Notes"

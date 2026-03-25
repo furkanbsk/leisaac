@@ -42,7 +42,7 @@ Bu yüzden `FrankaLeader` reader artık hem `panda_*` hem `fr3_*` ailelerini kab
 
 ## Repeatable Fake-Hardware Smoke
 
-Bu komut fake Franka bringup başlatır, `/joint_states` doğrular ve LeIsaac içinde headless follower smoke çalıştırır:
+Bu komut fake Franka bringup başlatır ve doğrulamayı doğrudan `FrankaLeader` subscriber üzerinden yaparak LeIsaac içinde headless follower smoke çalıştırır:
 
 ```bash
 bash scripts/tutorials/check_franka_real_to_sim_fake_smoke.sh
@@ -54,15 +54,46 @@ Başarı çıktısı:
 leader_smoke_ok {...}
 ```
 
+Record + replay doğrulaması için:
+
+```bash
+bash scripts/tutorials/check_franka_real_to_sim_record_replay_fake_smoke.sh
+```
+
+Başarı çıktısı:
+
+```text
+record_replay_smoke_ok /path/to/franka_leader_fake_smoke.hdf5
+```
+
 Bu şu zinciri doğrular:
 
 - `franka_bringup` fake hardware launch
-- `/joint_states` yayını
+- ROS2 state yayını
 - `FrankaLeader` ROS2 subscriber
 - `LeIsaac-Franka-LiftCube-v0`
 - sim Franka follower action step
 
+Not:
+
+- Bazı makinelerde `ros2 topic list` / `ros2 topic echo` CLI çağrıları kararsız olabilir.
+- Helper script bu yüzden topic introspection yerine doğrudan subscriber tabanlı smoke kullanır.
+- `pygame` ve `serial` Franka smoke için artık zorunlu değildir; bunlar yalnız gamepad/SO101/LeKiwi donanım yollarında gerekir.
+- Uzak makinede monitor bağlı olmasa da headless smoke desteklenir; `GLFW initialization failed` ve `failed to open the default display` warning'leri bu modda beklenebilir.
+- Eğer record/replay tarafında kamera hatası olarak `usdrt.hierarchy` görülürse ilk kontrol edilecek şey `IsaacLab` sürümüdür. Bu repo için doğrulanan kombinasyon `Isaac Sim 4.5 + IsaacLab 19b24c780ea (v2.1.1-4)` oldu.
+
 ## Gerçek Robot İçin Operasyon Sırası
+
+Ön koşullar:
+
+- Gerçek robot için standart güvenlik prosedürü aktif olmalı
+- Guiding / hand-guiding robot tarafında hazır olmalı
+- LeIsaac bu modda gerçek Franka'ya command göndermez; yalnız state okur
+- Doğrulanan stack:
+  - Isaac Sim `4.5`
+  - IsaacLab `19b24c780ea` (`v2.1.1-4`)
+  - ROS 2 `Humble`
+  - `franka_ros2`
 
 1. ROS 2 ortamını aç:
 
@@ -103,6 +134,44 @@ cd /path/to/leisaac
   --enable_cameras \
   --joint_state_topic /joint_states
 ```
+
+5. Kayıt almak için:
+
+```bash
+"${ISAACLAB_ROOT:-$HOME/IsaacLab}/isaaclab.sh" -p scripts/environments/teleoperation/teleop_se3_agent.py \
+  --task LeIsaac-Franka-LiftCube-v0 \
+  --teleop_device franka-leader \
+  --num_envs 1 \
+  --enable_cameras \
+  --joint_state_topic /joint_states \
+  --record \
+  --dataset_file ./datasets/franka_leader_live.hdf5
+```
+
+6. Replay doğrulaması için:
+
+```bash
+"${ISAACLAB_ROOT:-$HOME/IsaacLab}/isaaclab.sh" -p scripts/environments/teleoperation/replay.py \
+  --headless \
+  --enable_cameras \
+  --task LeIsaac-Franka-LiftCube-v0 \
+  --task_type franka-leader \
+  --dataset_file ./datasets/franka_leader_live.hdf5 \
+  --replay_mode action
+```
+
+Beklenen başarı satırı:
+
+```text
+Finished replaying 1 episode.
+```
+
+Operasyon notları:
+
+- Monitor bağlı olmasa da headless replay/record çalışır
+- `GLFW initialization failed` ve `failed to open the default display` warning'leri headless modda beklenebilir
+- Eğer kamera tarafında `usdrt.hierarchy` hatası görülürse önce `IsaacLab` commit'ini kontrol et
+- Dataset toplarken önce follower smoke, sonra kısa record, sonra replay sırasını izle
 
 ## Taşıma Notu
 

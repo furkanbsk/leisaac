@@ -26,6 +26,102 @@ Please refer to our [documentation](https://lightwheelai.github.io/leisaac/) to 
 >
 > For more features and updates, please refer to the [News](https://lightwheelai.github.io/leisaac/#news) section on our website!
 
+## Franka Real-to-Sim Quickstart
+
+This fork also contains a Franka `real leader -> sim follower -> dataset` path built on top of `franka_ros2`.
+
+Validated stack:
+
+- Isaac Sim `4.5`
+- IsaacLab `19b24c780ea` (`v2.1.1-4`)
+- ROS 2 `Humble`
+- `franka_ros2`
+
+Important notes:
+
+- The current Franka path is for `real Franka state -> simulated Franka follower`.
+- LeIsaac does not command the real Franka in this mode.
+- The real robot must already be in a safe hand-guiding / guiding workflow managed on the robot side.
+- On some systems, Franka ROS publishes `fr3_*` joint names instead of `panda_*`; this fork handles both.
+
+Environment check:
+
+```bash
+bash scripts/tutorials/check_franka_external_stack.sh
+```
+
+Fake-hardware smoke:
+
+```bash
+bash scripts/tutorials/check_franka_real_to_sim_fake_smoke.sh
+bash scripts/tutorials/check_franka_real_to_sim_record_replay_fake_smoke.sh
+```
+
+Live robot bring-up:
+
+```bash
+source /opt/ros/humble/setup.bash
+source "$HOME/franka_ros2_ws/install/setup.bash"
+
+ros2 launch franka_bringup franka.launch.py \
+  robot_type:=fr3 \
+  robot_ip:=<robot_ip> \
+  load_gripper:=true \
+  joint_state_rate:=30
+```
+
+Check live state:
+
+```bash
+ros2 topic list | grep joint_states
+timeout 5 ros2 topic echo /joint_states --once
+```
+
+Run the follower in Isaac Sim:
+
+```bash
+source "$HOME/miniconda3/etc/profile.d/conda.sh"
+conda activate env_isaacsim
+
+cd /path/to/leisaac
+"$HOME/IsaacLab/isaaclab.sh" -p scripts/environments/teleoperation/teleop_se3_agent.py \
+  --task LeIsaac-Franka-LiftCube-v0 \
+  --teleop_device franka-leader \
+  --num_envs 1 \
+  --enable_cameras \
+  --joint_state_topic /joint_states
+```
+
+Record a dataset:
+
+```bash
+"$HOME/IsaacLab/isaaclab.sh" -p scripts/environments/teleoperation/teleop_se3_agent.py \
+  --task LeIsaac-Franka-LiftCube-v0 \
+  --teleop_device franka-leader \
+  --num_envs 1 \
+  --enable_cameras \
+  --joint_state_topic /joint_states \
+  --record \
+  --dataset_file ./datasets/franka_leader_live.hdf5
+```
+
+Replay the dataset:
+
+```bash
+"$HOME/IsaacLab/isaaclab.sh" -p scripts/environments/teleoperation/replay.py \
+  --headless \
+  --enable_cameras \
+  --task LeIsaac-Franka-LiftCube-v0 \
+  --task_type franka-leader \
+  --dataset_file ./datasets/franka_leader_live.hdf5 \
+  --replay_mode action
+```
+
+See also:
+
+- [Franka real-to-sim smoke doc](./docs/docs/docs/getting_started/franka_real_to_sim_smoke.md)
+- [Franka roadmap](./docs/docs/docs/getting_started/franka_real_to_sim_roadmap.md)
+
 ## Citation 📝
 
 If you use leisaac, please cite it as follows.

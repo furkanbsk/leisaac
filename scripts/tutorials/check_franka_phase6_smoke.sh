@@ -27,6 +27,7 @@ fi
 
 print_section "Runtime Smoke"
 set +e
+export CONDA_NO_PLUGINS="${CONDA_NO_PLUGINS:-yes}"
 source "$CONDA_SH"
 conda activate "$CONDA_ENV_NAME"
 set +u

@@ -232,10 +232,14 @@ def main():
             break
     # Close environment after replay in complete
     plural_trailing_s = "s" if replayed_episode_count > 1 else ""
-    print(f"Finished replaying {replayed_episode_count} episode{plural_trailing_s}.")
+    print(f"Finished replaying {replayed_episode_count} episode{plural_trailing_s}.", flush=True)
+    sys.stdout.flush()
+    sys.stderr.flush()
     env.close()
 
 
 if __name__ == "__main__":
-    # run the main function
-    main()
+    try:
+        main()
+    finally:
+        simulation_app.close()

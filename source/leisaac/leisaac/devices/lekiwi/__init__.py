@@ -1,3 +1,11 @@
-from .lekiwi_gamepad import LeKiwiGamepad
 from .lekiwi_keyboard import LeKiwiKeyboard
-from .lekiwi_leader import LeKiwiLeader
+
+try:
+    from .lekiwi_gamepad import LeKiwiGamepad
+except ModuleNotFoundError:
+    LeKiwiGamepad = None
+
+try:
+    from .lekiwi_leader import LeKiwiLeader
+except ModuleNotFoundError:
+    LeKiwiLeader = None
