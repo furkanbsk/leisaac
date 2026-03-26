@@ -179,3 +179,6 @@ Bu repo remote `lira` makinesinde açıldığında önce şunu yap:
   - source ROS + compat workspace before launching Isaac GUI, otherwise `franka-leader` fails with `ModuleNotFoundError: rclpy`
   - do not use `--enable_cameras` on the remote GUI unless needed
   - use `--rendering_mode performance`
+- Gravity compensation helpers were added:
+  - `~/furkan_workspace/leisaac/scripts/tutorials/load_franka_54_gravity_comp.sh`
+  - `~/furkan_workspace/leisaac/scripts/tutorials/unload_franka_54_gravity_comp.sh`

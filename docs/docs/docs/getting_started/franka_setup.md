@@ -301,3 +301,27 @@ Notes:
 ```bash
 ~/furkan_workspace/leisaac/scripts/tutorials/run_franka_leader_gui.sh LeIsaac-Franka-LiftCube-v0
 ```
+
+## Gravity compensation mode
+
+If the robot goes red when you try to guide it by hand in the state-only bringup mode, do not keep forcing it.
+
+Official alternative:
+- use the `gravity_compensation_example_controller`
+
+Helpers added in this repo:
+
+```bash
+~/furkan_workspace/leisaac/scripts/tutorials/load_franka_54_gravity_comp.sh
+```
+
+To unload it:
+
+```bash
+~/furkan_workspace/leisaac/scripts/tutorials/unload_franka_54_gravity_comp.sh
+```
+
+Notes:
+- only run this when the robot is on, FCI is active, and `franka_bringup` is already running
+- keep the emergency stop ready
+- do not force the robot by hand before the controller is active
