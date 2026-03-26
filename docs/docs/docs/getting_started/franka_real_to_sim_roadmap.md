@@ -118,6 +118,9 @@ Teslim kriteri:
 
 ## 6. Real-to-Sim Teleop Smoke
 
+- [x] Remote PC üzerinde Wi-Fi + Franka Ethernet çift ağ yapısını kur
+- [x] Remote PC'de `enp4s0 -> 172.16.0.1/24` yapılandırmasını doğrula
+- [x] Gerçek Franka `172.16.0.2` ping erişimini doğrula
 - [x] Gerçek Franka bağlıyken sim Franka'yı boş sahnede sür
 - [x] Tek env smoke test yaz
 - [ ] Delay / jitter gözlemi yap
@@ -235,3 +238,8 @@ Teslim kriteri:
   - [franka_portability.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_portability.md)
 - Operasyon notu:
   - [franka_real_to_sim_smoke.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_real_to_sim_smoke.md)
+- Ağ ve robot erişim notu:
+  - [franka_setup.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_setup.md)
+- Uzak `lira` makinesinde Wi-Fi (`wlp3s0`) ve Franka Ethernet (`enp4s0`) aynı anda çalışacak şekilde yapılandırma doğrulandı
+- `Wired connection 1` artık `172.16.0.1/24`, `never-default=yes`, `ipv6.method=ignore` ile Franka ağı için kalıcı profile sahip
+- Gerçek Franka robotu `172.16.0.2` olarak `ping -I enp4s0` ile doğrulandı
