@@ -118,3 +118,64 @@ Gerçek robot erişimi doğrulandıktan sonra sıradaki iş:
 2. `/joint_states` doğrulama
 3. `franka-leader` ile `real -> sim` smoke
 4. dataset record/replay
+
+## Mevcut Blocker
+
+Network katmanı çalışıyor ancak `franka_ros2` gerçek donanım bringup şu hata ile duruyor:
+
+```text
+libfranka: Connection to FCI refused. Please install FCI feature or enable FCI mode in Desk.
+```
+
+Bu, şu an iki şeyden birinin eksik olduğunu gösterir:
+
+1. Robotta FCI feature yüklü değil
+2. Desk içinde FCI mode aktif değil
+
+Doğrulanan durum:
+
+- Robot web arayüzü erişilebilir:
+  - `https://172.16.0.2/desk/`
+- Ağ erişimi tamam:
+  - `ping -I enp4s0 172.16.0.2` başarılı
+- FCI tarafı reddediliyor:
+  - `ros2 launch franka_bringup franka.launch.py ...` başarısız
+
+## Desk Tarafında Yapılması Gerekenler
+
+Desk üzerinde:
+
+1. Brakeleri çöz
+2. Robotu execution-ready duruma getir
+3. Menüden `Activate FCI` seç
+4. Gerekirse çıkan onay penceresini açık bırak
+
+Ek kontrol:
+
+- `Settings -> System -> Installed Features` altında FCI feature kurulu olmalı
+
+## FCI Açıldıktan Sonra Doğrulama
+
+Remote PC üzerinde:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/franka_ros2_ws/install/setup.bash
+
+ros2 launch franka_bringup franka.launch.py \
+  robot_type:=fr3 \
+  robot_ip:=172.16.0.2 \
+  load_gripper:=false \
+  use_fake_hardware:=false \
+  joint_state_rate:=30
+```
+
+Ayrı terminalde:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/franka_ros2_ws/install/setup.bash
+
+ros2 topic list | grep joint_states
+ros2 topic echo /joint_states --once
+```
