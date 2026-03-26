@@ -70,11 +70,25 @@ Bringup şu hata ile duruyor:
 libfranka: Connection to FCI refused. Please install FCI feature or enable FCI mode in Desk.
 ```
 
-Bu şu anlama geliyor:
+Şu anki daha doğru yorum:
 
 - ağ erişimi tamam
 - robot cevap veriyor
-- ama Desk tarafında FCI açık değil ya da FCI feature kurulu değil
+- `172.16.0.2:1337` açık
+- FCI feature yüklü görünüyor
+- Desk tarafında `Activate/Deactivate FCI` davranışı var
+- ama `libfranka` istemcisi yine de oturumu reddediyor
+
+En güçlü güncel aday:
+
+- robot system image / FCI protokolü, remote PC'deki `libfranka 0.20.4` ve `franka_hardware 2.3.0` ile uyumsuz olabilir
+
+Ek bulgular:
+
+- Robot Desk HTML yanıtı `Last-Modified: Thu, 21 Sep 2023 14:48:16 GMT`
+- Güncel `libfranka-common` robot protokolü `kVersion = 10`
+- FR3 resmi dokümanında `Activate FCI` sonrası Desk sidebar'ının yeşil olması normal davranış
+- Dokümanda robot üzerinde ayrıca bir FCI tuşuna basılması gerektiği yazmıyor
 
 ## Desk Erişimi
 
@@ -89,7 +103,9 @@ Remote makinede bir browser açıp ya da başka bir cihazdan aynı ağa bağlı 
 1. Robotu normal şekilde hazır duruma getir
 2. Gerekirse brake/activation adımlarını tamamla
 3. Desk içinde `Activate FCI` aç
-4. Gerekirse FCI feature'ın kurulu olduğunu doğrula
+4. FR3 confirm adımını tamamla
+5. FCI feature'ın kurulu olduğunu doğrula
+6. Mümkünse Desk -> Settings -> System içinden tam system version bilgisini çıkar
 
 ## FCI Açıldıktan Sonra İlk Komutlar
 
@@ -170,6 +186,8 @@ Bu repo remote `lira` makinesinde açıldığında önce şunu yap:
 
 1. `franka_setup.md` ve bu handoff dosyasını oku
 2. `ping -I enp4s0 -c 2 172.16.0.2` ile robot erişimini doğrula
-3. FCI açıksa `franka_bringup` başlat
-4. `/joint_states` geliyorsa `franka-leader` ile real-to-sim smoke yap
-5. Sonra dataset recording aşamasına geç
+3. Desk -> System version bilgisini not et
+4. Bu version ile `libfranka 0.20.4` uyumunu kontrol et
+5. FCI açıksa `franka_bringup` başlat
+6. `/joint_states` geliyorsa `franka-leader` ile real-to-sim smoke yap
+7. Sonra dataset recording aşamasına geç

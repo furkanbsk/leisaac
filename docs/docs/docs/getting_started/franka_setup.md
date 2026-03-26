@@ -131,10 +131,13 @@ Network katmanı çalışıyor ancak `franka_ros2` gerçek donanım bringup şu 
 libfranka: Connection to FCI refused. Please install FCI feature or enable FCI mode in Desk.
 ```
 
-Bu, şu an iki şeyden birinin eksik olduğunu gösterir:
+Bu hata ilk bakışta yalnızca FCI kapalı gibi görünür, ama artık elimizde ek bulgular var:
 
-1. Robotta FCI feature yüklü değil
-2. Desk içinde FCI mode aktif değil
+- `Installed Features` içinde FCI görünüyor
+- Robot Desk erişilebilir
+- `172.16.0.2:1337` açık
+- FR3 resmi dokümanında `Activate FCI` sonrası sidebar'ın yeşil olması beklenen davranış
+- Doküman robot üzerinde ayrıca bir FCI tuşuna basılması gerektiğini söylemiyor
 
 Doğrulanan durum:
 
@@ -145,6 +148,26 @@ Doğrulanan durum:
 - FCI tarafı reddediliyor:
   - `ros2 launch franka_bringup franka.launch.py ...` başarısız
 
+## En Güçlü Güncel Şüphe
+
+Artık en güçlü aday `FCI kapalı` değil, sürüm uyumsuzluğu:
+
+- Remote PC'de kurulu `franka_hardware`:
+  - `2.3.0`
+- Remote PC'de kurulu `ros-humble-libfranka`:
+  - `0.20.4`
+- Robot Desk HTML yanıtı:
+  - `Last-Modified: Thu, 21 Sep 2023 14:48:16 GMT`
+- Güncel `libfranka-common` robot komut protokolü:
+  - `kVersion = 10`
+
+Bu tablo, robot kontrol ünitesinin daha eski bir system image / FCI protokolüyle
+çalışıp 2026 tarihli `libfranka 0.20.4` istemcisini reddediyor olabileceğini düşündürüyor.
+
+Bir sonraki kritik bilgi:
+
+- Desk -> Settings -> System içindeki tam system version
+
 ## Desk Tarafında Yapılması Gerekenler
 
 Desk üzerinde:
@@ -152,11 +175,17 @@ Desk üzerinde:
 1. Brakeleri çöz
 2. Robotu execution-ready duruma getir
 3. Menüden `Activate FCI` seç
-4. Gerekirse çıkan onay penceresini açık bırak
+4. FR3 için çıkan confirm adımını tamamla
+5. Gerekirse çıkan onay penceresini açık bırak
 
 Ek kontrol:
 
 - `Settings -> System -> Installed Features` altında FCI feature kurulu olmalı
+
+Not:
+
+- FR3 dokümanında `Activate FCI` sonrası sidebar'ın yeşil olması normal davranış olarak gösteriliyor
+- Robot üzerinde ayrıca basılması gereken özel bir FCI tuşu dokümante edilmiyor
 
 ## FCI Açıldıktan Sonra Doğrulama
 
