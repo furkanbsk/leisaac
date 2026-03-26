@@ -284,3 +284,20 @@ Headless smoke son marker:
 ```text
 leader_smoke_ok {'task': 'LeIsaac-Franka-LiftCube-v0', 'num_envs': 1, 'joint_state_topic': '/joint_states', 'action_shape': (1, 9)}
 ```
+## Live GUI follower launch
+
+For the real `franka-leader -> Isaac Sim follower` GUI on the remote workstation, use:
+
+```bash
+~/furkan_workspace/leisaac/scripts/tutorials/run_franka_leader_gui.sh
+```
+
+Notes:
+- This script sources `conda`, Isaac Sim, ROS 2 Humble, and the `5.4`-compatible `franka_ros2` workspace.
+- It uses `--rendering_mode performance`.
+- It intentionally does not pass `--enable_cameras`; that was making GUI startup much heavier on the remote desktop.
+- Default task is `LeIsaac-Franka-BowlCubeZone-v0`. You can override it:
+
+```bash
+~/furkan_workspace/leisaac/scripts/tutorials/run_franka_leader_gui.sh LeIsaac-Franka-LiftCube-v0
+```

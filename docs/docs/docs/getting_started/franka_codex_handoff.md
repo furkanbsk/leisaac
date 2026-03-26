@@ -173,3 +173,9 @@ Bu repo remote `lira` makinesinde açıldığında önce şunu yap:
 4. `/joint_states` geldiğini doğrula
 5. `franka-leader` ile real-to-sim smoke yap
 6. Sonra dataset recording aşamasına geç
+- The working remote GUI launch for live follower is now:
+  - `~/furkan_workspace/leisaac/scripts/tutorials/run_franka_leader_gui.sh`
+- Important:
+  - source ROS + compat workspace before launching Isaac GUI, otherwise `franka-leader` fails with `ModuleNotFoundError: rclpy`
+  - do not use `--enable_cameras` on the remote GUI unless needed
+  - use `--rendering_mode performance`
