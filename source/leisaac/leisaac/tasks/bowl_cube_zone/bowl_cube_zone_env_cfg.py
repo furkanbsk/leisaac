@@ -57,6 +57,7 @@ class FrankaBowlCubeZoneEnvCfg(ik_rel_env_cfg.FrankaCubeLiftEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.object.init_state.pos = (0.56, 0.0, 0.025)
+        self.commands.object_pose.debug_vis = False
         if hasattr(self.events, "reset_object_position"):
             self.events.reset_object_position = None
 

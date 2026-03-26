@@ -167,6 +167,9 @@ class Device(DeviceBase):
                 self._reset_state = True
                 if "N" in self._additional_callbacks:
                     self._additional_callbacks["N"]()
+        # Do not swallow the event stream. Isaac Lab's underlying teleop devices
+        # also subscribe to keyboard events and must continue receiving them.
+        return True
 
     def _stop_keyboard_listener(self):
         if hasattr(self, "_input") and hasattr(self, "_keyboard") and hasattr(self, "_keyboard_sub"):

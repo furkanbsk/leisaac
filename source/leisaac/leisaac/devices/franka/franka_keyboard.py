@@ -8,6 +8,7 @@ class FrankaKeyboard(Device):
 
     def __init__(self, env, sensitivity: float = 1.0):
         super().__init__(env, "franka-keyboard")
+        self._started = True
         self._se3_device = Se3Keyboard(
             pos_sensitivity=0.05 * sensitivity,
             rot_sensitivity=0.05 * sensitivity,
@@ -31,7 +32,20 @@ class FrankaKeyboard(Device):
         return self._se3_device.advance()
 
     def reset(self):
+        self._started = True
+        self._reset_state = False
         self._se3_device.reset()
+
+    def _split_command(self):
+        command = self.get_device_state()
+        # Isaac Lab 2.1.x returns a single 7D tensor: [dx, dy, dz, rx, ry, rz, gripper].
+        # Older wrappers expected a tuple of (delta_pose, gripper_command), so support both.
+        if isinstance(command, (tuple, list)):
+            delta_pose, gripper_command = command
+            return delta_pose, bool(gripper_command)
+        delta_pose = command[:6]
+        gripper_command = bool(command[6] < 0)
+        return delta_pose, gripper_command
 
     def input2action(self):
         reset = self._reset_state
@@ -43,7 +57,7 @@ class FrankaKeyboard(Device):
         if reset:
             self._reset_state = False
             return action
-        delta_pose, gripper_command = self.get_device_state()
+        delta_pose, gripper_command = self._split_command()
         action["delta_pose"] = delta_pose
         action["gripper_command"] = gripper_command
         return action

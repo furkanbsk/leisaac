@@ -108,6 +108,7 @@ import gymnasium as gym
 import torch
 from isaaclab.envs import DirectRLEnv, ManagerBasedRLEnv
 from isaaclab.managers import DatasetExportMode, TerminationTermCfg
+from isaaclab_tasks.manager_based.manipulation.lift import mdp
 from isaaclab_tasks.utils import parse_env_cfg
 from leisaac.enhance.managers import EnhanceDatasetExportMode, StreamingRecorderManager
 from leisaac.utils.env_utils import dynamic_reset_gripper_effort_limit_sim
@@ -204,6 +205,12 @@ def main():  # noqa: C901
         env_cfg.never_time_out = True
         env_cfg.manual_terminate = True
     else:
+        if "Lift" in task_name and hasattr(env_cfg, "commands") and hasattr(env_cfg.commands, "object_pose"):
+            # Match the official Isaac Lab teleop behavior: keep the goal fixed instead of
+            # continuously resampling RL command targets during manual teleoperation.
+            env_cfg.commands.object_pose.resampling_time_range = (1.0e9, 1.0e9)
+            if hasattr(env_cfg.terminations, "object_reached_goal"):
+                env_cfg.terminations.object_reached_goal = TerminationTermCfg(func=mdp.object_reached_goal)
         # modify configuration
         if hasattr(env_cfg.terminations, "time_out"):
             env_cfg.terminations.time_out = None
@@ -376,6 +383,7 @@ def main():  # noqa: C901
                         manual_terminate(env, True)
                 if should_reset_recording_instance:
                     env.reset()
+                    teleop_interface.reset()
                     should_reset_recording_instance = False
                     if start_record_state:
                         if args_cli.record:
