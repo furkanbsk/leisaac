@@ -240,6 +240,8 @@ Teslim kriteri:
   - [franka_real_to_sim_smoke.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_real_to_sim_smoke.md)
 - Ağ ve robot erişim notu:
   - [franka_setup.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_setup.md)
+- Remote Codex handoff notu:
+  - [franka_codex_handoff.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_codex_handoff.md)
 - Uzak `lira` makinesinde Wi-Fi (`wlp3s0`) ve Franka Ethernet (`enp4s0`) aynı anda çalışacak şekilde yapılandırma doğrulandı
 - `Wired connection 1` artık `172.16.0.1/24`, `never-default=yes`, `ipv6.method=ignore` ile Franka ağı için kalıcı profile sahip
 - Gerçek Franka robotu `172.16.0.2` olarak `ping -I enp4s0` ile doğrulandı

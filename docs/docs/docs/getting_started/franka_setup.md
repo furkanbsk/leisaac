@@ -119,6 +119,10 @@ Gerçek robot erişimi doğrulandıktan sonra sıradaki iş:
 3. `franka-leader` ile `real -> sim` smoke
 4. dataset record/replay
 
+Remote'da yeni bir Codex oturumu açılacaksa önce şu dosyayı oku:
+
+- [franka_codex_handoff.md](/home/nvidia/leisaac/docs/docs/docs/getting_started/franka_codex_handoff.md)
+
 ## Mevcut Blocker
 
 Network katmanı çalışıyor ancak `franka_ros2` gerçek donanım bringup şu hata ile duruyor:
