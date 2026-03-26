@@ -245,5 +245,10 @@ Teslim kriteri:
 - Uzak `lira` makinesinde Wi-Fi (`wlp3s0`) ve Franka Ethernet (`enp4s0`) aynı anda çalışacak şekilde yapılandırma doğrulandı
 - `Wired connection 1` artık `172.16.0.1/24`, `never-default=yes`, `ipv6.method=ignore` ile Franka ağı için kalıcı profile sahip
 - Gerçek Franka robotu `172.16.0.2` olarak `ping -I enp4s0` ile doğrulandı
-- `franka_ros2` gerçek donanım bringup denemesi yapıldı ancak şu an blocker `FCI refused`
-- Sonraki fiziksel adım Desk üzerinde `Activate FCI` ve FCI feature kontrolü
+- Robot system version `5.4.0` olarak doğrulandı
+- Uyumlu stack `libfranka 0.12.1 + franka_ros2 v0.1.7` olarak izole `~/franka_ros2_54_ws` altında kuruldu
+- `franka_semantic_components` için Humble 2026 `controller_interface` include export değişimine uyum patch'i uygulandı
+- Remote makinede `ufw` default incoming deny olduğu için robotun UDP akışı düşüyordu; `allow in on enp4s0 from 172.16.0.2` kuralı eklendi
+- Gerçek robot bringup artık başarılı
+- `/joint_states` gerçek robot üzerinde doğrulandı
+- `franka-leader` ile headless canlı `real -> sim` smoke geçti

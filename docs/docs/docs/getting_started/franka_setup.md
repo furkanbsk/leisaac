@@ -148,9 +148,34 @@ Doğrulanan durum:
 - FCI tarafı reddediliyor:
   - `ros2 launch franka_bringup franka.launch.py ...` başarısız
 
-## En Güçlü Güncel Şüphe
+## Kök Neden ve Çözüm
 
-Artık en güçlü aday `FCI kapalı` değil, sürüm uyumsuzluğu:
+İki ayrı problem vardı:
+
+1. `libfranka/franka_ros2` sürümü fazla yeniydi
+2. Remote makinede `ufw` robotun host'a yolladığı UDP akışını düşürüyordu
+
+Doğrulanan uyumlu stack:
+
+- Robot system version:
+  - `5.4.0`
+- Uyumlu `libfranka`:
+  - `0.12.1`
+- Uyumlu `franka_ros2`:
+  - `v0.1.7`
+
+Resmi kaynaklar:
+
+- `libfranka 0.12.1` -> `Requires Franka Research 3 system version >= 5.2.0`
+- `libfranka 0.13.3` -> `Requires Franka Research 3 system version >= 5.5.0`
+- `franka_ros2 v0.1.8` -> `Requires libfranka >= 0.13.0`
+
+Yani `5.4.0` için güvenli kombinasyon:
+
+- `libfranka 0.12.1`
+- `franka_ros2 v0.1.7`
+
+Eski şüphe notu:
 
 - Remote PC'de kurulu `franka_hardware`:
   - `2.3.0`
@@ -162,11 +187,23 @@ Artık en güçlü aday `FCI kapalı` değil, sürüm uyumsuzluğu:
   - `kVersion = 10`
 
 Bu tablo, robot kontrol ünitesinin daha eski bir system image / FCI protokolüyle
-çalışıp 2026 tarihli `libfranka 0.20.4` istemcisini reddediyor olabileceğini düşündürüyor.
+çalışıp 2026 tarihli `libfranka 0.20.4` istemcisini reddettiğini gösterdi.
 
-Bir sonraki kritik bilgi:
+## UFW Gereksinimi
 
-- Desk -> Settings -> System içindeki tam system version
+Remote makinede `ufw` aktif ve default incoming policy `deny`.
+
+FCI handshake sonrası robot, host'a yeni UDP paketleri açıyor. Bunlar firewall tarafından
+düşüyordu. Bu yüzden:
+
+- `tcpdump` UDP paketlerini görüyordu
+- ama `libfranka` `UDP receive: Timeout` veriyordu
+
+Kalıcı çözüm:
+
+```bash
+echo lira | sudo -S ufw allow in on enp4s0 from 172.16.0.2 comment 'Franka FCI UDP'
+```
 
 ## Desk Tarafında Yapılması Gerekenler
 
@@ -192,15 +229,7 @@ Not:
 Remote PC üzerinde:
 
 ```bash
-source /opt/ros/humble/setup.bash
-source ~/franka_ros2_ws/install/setup.bash
-
-ros2 launch franka_bringup franka.launch.py \
-  robot_type:=fr3 \
-  robot_ip:=172.16.0.2 \
-  load_gripper:=false \
-  use_fake_hardware:=false \
-  joint_state_rate:=30
+/home/nvidia/leisaac/scripts/tutorials/run_franka_54_bringup.sh
 ```
 
 Ayrı terminalde:
@@ -211,4 +240,47 @@ source ~/franka_ros2_ws/install/setup.bash
 
 ros2 topic list | grep joint_states
 ros2 topic echo /joint_states --once
+```
+
+Beklenen topicler:
+
+- `/joint_states`
+- `/franka/joint_states`
+- `/dynamic_joint_states`
+
+Beklenen joint isimleri:
+
+- `panda_joint1..7`
+
+## Kurulum Scripti
+
+Remote makinede uyumlu stack'i tekrar kurmak için:
+
+```bash
+cd ~/furkan_workspace/leisaac
+chmod +x scripts/tutorials/setup_franka_54_compat_ws.sh
+echo lira | sudo -S scripts/tutorials/setup_franka_54_compat_ws.sh
+```
+
+Script:
+
+- `franka_ros2 v0.1.7` çeker
+- `libfranka 0.12.1` çeker
+- `~/franka_compat_prefix` altına kurar
+- `franka_semantic_components` için Humble uyum patch'i uygular
+- `~/franka_ros2_54_ws` overlay workspace'ini derler
+- `ufw` kuralını ekler
+
+## Doğrulanan Sonuç
+
+Bu kombinasyonla şu aşamalar geçti:
+
+- gerçek robot bringup
+- `/joint_states` yayını
+- `franka-leader` ile headless `real -> sim` smoke
+
+Headless smoke son marker:
+
+```text
+leader_smoke_ok {'task': 'LeIsaac-Franka-LiftCube-v0', 'num_envs': 1, 'joint_state_topic': '/joint_states', 'action_shape': (1, 9)}
 ```
